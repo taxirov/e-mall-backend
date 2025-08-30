@@ -9,6 +9,7 @@ const validator = createValidator();
 const userController = new UserController()
 
 router.post('/register',   validator.body(userValidationSchemaRegister), userController.register)
+router.post('/register/telegram', userController.telegramVerify)
 router.post('/login',   userController.login)
 
 export default router;
