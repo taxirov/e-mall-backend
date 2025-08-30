@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// ===== Mahsulot mavsumiyliklari =====
+enum Seasonality {
+  ALL_YEAR /// Butun yil sotiladi
+  SPRING /// Faqat bahor
+  SUMMER /// Faqat yoz
+  AUTUMN /// Faqat kuz
+  WINTER /// Faqat qish
+}
+
+/// ===== Mahsulot o'lchov birliklari =====
+enum Unit {
+  PIECE /// Dona
+  KILOGRAM /// Kilogramm
+  LITER /// Litr
+  METER /// Metr
+  SQUARE_METER /// Metr kvadrat
+  CUBIC_METER /// Metr kub
+  PACK /// O‘ram
+}
+
+/// ===== Mahsulot statuslari =====
+enum ProductStatus {
+  ACTIVE /// Mahsulot faol – savdoda mavjud, buyurtma qilish mumkin
+  INACTIVE /// Mahsulot vaqtincha o‘chirib qo‘yilgan – lekin bazada saqlanadi
+  OUT_OF_STOCK /// Mahsulot tugagan – omborda qolmagan, buyurtma berib bo‘lmaydi
+  DISCONTINUED /// Mahsulot butunlay savdodan chiqarilgan – kelajakda sotilmaydi
+  LOW_STOCK /// Mahsulot kam qolgan – omborda oz miqdorda mavjud (tezda tugashi mumkin)
+}
+
+/// ===== Pul birligi =====
+enum Currency {
+  UZS
+}
+
+/// ===== Foydalanuchi rollari =====
+enum Role {
+  SUPER_ADMIN // platforma boshqaruvi
+  COMPANY_OWNER // kompaniya egasi
+  ADMIN // kompaniya administratori
+  MANAGER // filial/bulim boshqaruvchisi
+  SELLER // kassir/sotuvchi
+  COOK // oshpaz
+  WAITER // ofitsiant
+  DELIVERY // yetkazib beruvchi
+  CUSTOMER // oddiy mijoz
+  ACCOUNTANT // buxgalter
+  STOCK_MANAGER // ombor mudiri
+}
+
+/// ===== Buyurtma statuslari =====
+enum OrderStatus {
+  PENDING /// Buyurtma qabul qilingan, lekin hali tasdiqlanmagan
+  CONFIRMED /// Admin/Seller tomonidan tasdiqlangan
+  IN_PROGRESS /// Jarayonda (tayyorlanmoqda yoki yig'ilmoqda)
+  READY /// Tayyor, yetkazishga/olib ketishga hozir
+  ON_THE_WAY /// Yetkazib berilmoqda
+  COMPLETED /// Muvaffaqiyatli tugagan
+  CANCELLED /// Bekor qilingan (mijoz yoki tizim tomonidan)
+  RETURNED /// Mijoz qaytargan (agar savdo tizimi bo‘lsa)
+}
+
+enum RequestStatus {
+  PENDING /// So'rov qabul qilingan, lekin hali tasdiqlanmagan
+  IN_PROGRESS /// Jarayonda (ko'rib chiqilmoqda yoki tekshirilmoqda)
+  CONFIRMED /// Qabul qiluvchi tomonidan tasdiqlangan
+  CANCELLED /// Bekor qilingan (mijoz yoki kompaniya tomonidan)
+}
+
+/// ===== Kompaniya turlari =====
+enum CompanyType {
+  CAFE
+  MARKET
+}
+
+/// ===== USER MANAGEMENT =====
+model User {
+  id           Int      @id @default(autoincrement())
+  firstName    String?
+  lastName     String?
+  middleName   String?
+  nickname     String   @unique
+  phone        String   @unique
+  secondPhone  String?
+  password     String   @db.VarChar(255)
+  companyLimit Int      @default(1)
+  salary       Int?
+  avatarUrl    String?
+  bio          String?
+  adress       Json?
+  emails       String[]
+  phones       String[]
+
+  // xavfsizlik
+  isActive     Boolean  @default(true)
+  isLoggedIn Boolean @default(false)
+  activeToken  String?
+  ipAddress    String?
+  deviceName   String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  roles            Role[]            @default([CUSTOMER])
+  orderAssignments OrderAssignment[]
+  userInCompanies  UserInCompany[]
+
+  @@index([phone])
+  @@index([firstName, lastName, middleName])
+  @@index([phones])
+}
+
+/// ===== COMPANY & CATEGORY =====
+model Company {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  desc       String?
+  address    Json? // { city: "", zip: "", street: "" }
+  mainPhone  String
+  phones     String[]
+  bannerUrl  String?
+  logoUrl    String?
+  emails     String[]
+  websiteUrl String?
+  type       CompanyType
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  products        Product[]
+  userInCompanies UserInCompany[]
+
+  @@index([name, mainPhone])
+}
+
+model UserInCompany {
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+  roles     Role[]
+
+  @@id([userId, companyId]) // bir user bitta kompaniyada faqat 1 marta bo‘ladi
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subcategories SubCategory[]
+  products      Product[]
+}
+
+model SubCategory {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categoryId Int
+  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  products   Product[]
+
+  @@unique([name, categoryId]) // Har bir kategoriya uchun subkategoriya nomi noyib bo'lishi kerak
+}
+
+/// ===== PRODUCT =====
+model Product {
+  id            Int       @id @default(autoincrement())
+  name          String
+  barcode       String?   @unique
+  description   String?
+  price         Decimal   @default(0.0)
+  discountPrice Decimal?
+  stock         Int       @default(0)
+  isFeatured    Boolean   @default(false)
+  minAge        Int       @default(0)
+  maxAge        Int       @default(100)
+  tags          String[]
+  images        String[]
+  weight        Decimal?
+  dimensions    String?
+  viewCount     Int       @default(0)
+  soldCount     Int       @default(0)
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  status      ProductStatus @default(ACTIVE)
+  unit        Unit          @default(PIECE)
+  seasonality Seasonality   @default(ALL_YEAR)
+  currency    Currency      @default(UZS)
+
+  // Relations
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  categoryId Int?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  subCategoryId  Int?
+  subCategory    SubCategory?     @relation(fields: [subCategoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  ProductInOrder ProductInOrder[]
+
+  @@index([status])
+  @@index([companyId])
+  @@index([price])
+  @@index([tags])
+  @@index([isFeatured])
+}
+
+model Order {
+  id        Int         @id @default(autoincrement())
+  status    OrderStatus
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // Bog'lanishlar
+  assignments OrderAssignment[]
+
+  ProductInOrder ProductInOrder[]
+}
+
+model OrderAssignment {
+  id      Int  @id @default(autoincrement())
+  orderId Int
+  userId  Int
+  role    Role // qaysi rol bilan qatnashgani (DELIVERY, COOK, SELLER, ...)
+
+  assignedAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  products ProductInOrder[]
+
+  @@unique([orderId, userId, role]) // Bir foydalanuvchi bir orderga bir xil rol bilan faqat 1 marta qo‘shiladi
+}
+
+model ProductInOrder {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int     @default(1) // nechtaligini saqlash uchun
+  price     Decimal // o‘sha paytdagi narx (mahsulot narxi keyin o‘zgarsa ham buyurtma o‘zgarmaydi)
+
+  order           Order             @relation(fields: [orderId], references: [id])
+  product         Product           @relation(fields: [productId], references: [id])
+  OrderAssignment OrderAssignment[]
+
+  @@unique([orderId, productId]) // bir buyurtmada bir xil mahsulot faqat 1 marta yoziladi
+}
