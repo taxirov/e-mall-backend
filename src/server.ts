@@ -2,11 +2,12 @@ import dotenv from "dotenv";
 dotenv.config();
 import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
-
+import useragent from "express-useragent";
 // routes
 import userRoutes from "../src/routes/user.routes";
 
 const app = express();
+app.use(useragent.express())
 
 app.use(cors({
   origin: '*',

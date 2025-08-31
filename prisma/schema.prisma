@@ -90,7 +90,7 @@ model User {
   nickname     String   @unique
   phone        String   @unique
   secondPhone  String?
-  password     String?   @db.VarChar(255)
+  password     String?  @db.VarChar(255)
   companyLimit Int      @default(1)
   salary       Int?
   avatarUrl    String?
@@ -101,7 +101,7 @@ model User {
 
   // xavfsizlik
   isActive    Boolean @default(true)
-  isLoggedIn  Boolean @default(false)
+  isLoggedIn  Boolean @default(true)
   activeToken String?
   ipAddress   String?
   deviceName  String?
@@ -121,11 +121,22 @@ model User {
 model UserTelegram {
   id       Int     @id @default(autoincrement())
   phone    String
-  code     Int 
+  code     Int
   name     String?
   username String?
   chatId   String
   status   Boolean @default(true)
+}
+
+model UserPending {
+  phone    String
+  otp      Int
+  nickname String
+  password String
+  token    String
+  status   Boolean @default(true)
+
+  @@id(phone)
 }
 
 /// ===== COMPANY & CATEGORY =====
