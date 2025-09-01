@@ -4,15 +4,22 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+<<<<<<< HEAD
     "start": "node --env-file=.env -r tsx src/server.ts",
     "dev": "nodemon --watch src --exec tsx src/server.ts"
+=======
+    "start": "ts-node  src/server.ts",
+    "dev": "nodemon src/server.ts"
+>>>>>>> 9842ee5d2a0e8751028df67837b3081bdc2574ef
   },
   "keywords": [],
   "author": "Saad Takhir",
   "license": "ISC",
   "devDependencies": {
     "@types/express": "^5.0.3",
+    "@types/express-useragent": "^1.0.5",
     "@types/node": "^24.3.0",
+    "@types/node-telegram-bot-api": "^0.64.10",
     "nodemon": "^3.1.10",
     "prisma": "^6.15.0",
     "ts-node": "^10.9.2",
@@ -31,9 +38,11 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "express-joi-validation": "^6.1.0",
+    "express-useragent": "^1.0.15",
     "glob": "^11.0.3",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "node-telegram-bot-api": "^0.66.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   }

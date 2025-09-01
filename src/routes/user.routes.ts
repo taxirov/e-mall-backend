@@ -8,7 +8,9 @@ const router = express.Router();
 const validator = createValidator();
 const userController = new UserController()
 
-router.post('/register',   validator.body(userValidationSchemaRegister), userController.register)
-router.post('/login',   userController.login)
+router.post('/register', validator.body(userValidationSchemaRegister), userController.registerViaOtp)
+router.post('/verify-otp', checkToken, userController.verifyOtp)
+// router.post('/login/via-telegram', userController.telegramVerify)
+router.post('/login', userController.login)
 
 export default router;

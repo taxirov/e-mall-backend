@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 
 export async function checkToken(req: Request, res: Response, next: NextFunction) {
     try {
-        const token = req.header('access-token')
+        const token = req.header('authorization')
         if (!token) {
             res.status(403).json({
                 message: "Token not provided"
@@ -14,9 +14,9 @@ export async function checkToken(req: Request, res: Response, next: NextFunction
             next()
         }
     }
-    catch (err: any) {
-        res.status(401).json({
-            message: "Token invalid or expired"
+    catch (error: any) {
+        res.json({
+            message: error.message
         })
     }
 }
