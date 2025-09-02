@@ -4,13 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-<<<<<<< HEAD
-    "start": "node --env-file=.env -r tsx src/server.ts",
-    "dev": "nodemon --watch src --exec tsx src/server.ts"
-=======
     "start": "ts-node  src/server.ts",
     "dev": "nodemon src/server.ts"
->>>>>>> 9842ee5d2a0e8751028df67837b3081bdc2574ef
   },
   "keywords": [],
   "author": "Saad Takhir",
