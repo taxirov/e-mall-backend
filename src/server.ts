@@ -24,7 +24,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 const port = +process.env.PORT! || 3000;
 
-app.use('/api/user', userRoutes)
+app.use('/api', userRoutes)
 // const httpsServer = https.createServer(credentials, app);
 
 app.listen(port, () => {

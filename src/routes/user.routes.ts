@@ -1,16 +1,31 @@
-import express from 'express';
+// src/routes/user.routes.ts
+import { Router } from "express";
 import { UserController } from "../controllers/user.controller";
-import { createValidator } from 'express-joi-validation';
-import { userValidationSchemaRegister } from '../validations/user.validation';
-import { checkToken } from '../middlewares/user.middleware';
 
-const router = express.Router();
-const validator = createValidator();
-const userController = new UserController()
+const r = Router();
+const c = new UserController();
 
-router.post('/register', validator.body(userValidationSchemaRegister), userController.registerViaOtp)
-router.post('/verify-otp', checkToken, userController.verifyOtp)
-// router.post('/login/via-telegram', userController.telegramVerify)
-router.post('/login', userController.login)
+// Users
+r.post("/user/register", c.registerViaOtp.bind(c));
+r.post('/user/verify-otp', c.verifyOtp.bind(c))
+r.post("/user/login", c.registerViaOtp.bind(c));
+r.post("/user", c.getAll.bind(c));
+r.get("/user/:id", c.getById.bind(c));
+r.post("/user/edit", c.edit.bind(c));
+r.patch("/user/reset-password", c.updatePassword.bind(c));
+// r.patch("/user/:id/image", c.setImage.bind(c));
+// r.patch("/user/:id/active", c.setActive.bind(c));
 
-export default router;
+// Finders
+r.get("/user/by-phone", c.findByPhone.bind(c));
+r.get("/user/by-nickname", c.findByNickname.bind(c));
+
+// Roles
+// r.put("/user/:id/roles", c.setRoles.bind(c));
+
+// Telegram
+// r.post("/telegram/user", c.createTelegramUser.bind(c));
+// r.get("/telegram/user", c.getTelegramUser.bind(c));
+// r.post("/telegram/user/:id/deactivate", c.deactiveTelegramUser.bind(c));
+
+export default r;

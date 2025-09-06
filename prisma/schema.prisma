@@ -1,3 +1,16 @@
+// Prisma schema for E‑Mall (PostgreSQL)
+// - Multi-tenant ready via company scoping on business entities
+// - Inventory with universal locations (Company/Branch/Storage)
+// - Orders, Assignments, Transfers
+//
+// Notes:
+// * If you already have data, review breaking changes (e.g., ProductInCompany now has companyId).
+// * Decimal precision can be tuned to your needs.
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Generator & Datasource
+// ────────────────────────────────────────────────────────────────────────────────
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,101 +20,115 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// ===== Mahsulot mavsumiyliklari =====
+// ────────────────────────────────────────────────────────────────────────────────
+// Enums
+// ────────────────────────────────────────────────────────────────────────────────
+
 enum Seasonality {
-  ALL_YEAR /// Butun yil sotiladi
-  SPRING /// Faqat bahor
-  SUMMER /// Faqat yoz
-  AUTUMN /// Faqat kuz
-  WINTER /// Faqat qish
+  ALL_YEAR // Butun yil sotiladi
+  SPRING   // Faqat bahor
+  SUMMER   // Faqat yoz
+  AUTUMN   // Faqat kuz
+  WINTER   // Faqat qish
 }
 
-/// ===== Mahsulot o'lchov birliklari =====
 enum Unit {
-  PIECE /// Dona
-  KILOGRAM /// Kilogramm
-  LITER /// Litr
-  METER /// Metr
-  SQUARE_METER /// Metr kvadrat
-  CUBIC_METER /// Metr kub
-  PACK /// O‘ram
+  PIECE        // Dona
+  KILOGRAM     // Kilogramm
+  LITER        // Litr
+  METER        // Metr
+  SQUARE_METER // Metr kvadrat
+  CUBIC_METER  // Metr kub
+  PACK         // O‘ram
 }
 
-/// ===== Mahsulot statuslari =====
 enum ProductStatus {
-  ACTIVE /// Mahsulot faol – savdoda mavjud, buyurtma qilish mumkin
-  INACTIVE /// Mahsulot vaqtincha o‘chirib qo‘yilgan – lekin bazada saqlanadi
-  OUT_OF_STOCK /// Mahsulot tugagan – omborda qolmagan, buyurtma berib bo‘lmaydi
-  DISCONTINUED /// Mahsulot butunlay savdodan chiqarilgan – kelajakda sotilmaydi
-  LOW_STOCK /// Mahsulot kam qolgan – omborda oz miqdorda mavjud (tezda tugashi mumkin)
+  ACTIVE        // Mavjud
+  INACTIVE      // Vaqtinchalik o‘chirilgan
+  OUT_OF_STOCK  // Omborda yo‘q
+  DISCONTINUED  // Sotuvdan chiqarilgan
+  LOW_STOCK     // Kam qolgan
 }
 
-/// ===== Pul birligi =====
 enum Currency {
   UZS
 }
 
-/// ===== Foydalanuchi rollari =====
 enum Role {
-  SUPER_ADMIN // platforma boshqaruvi
-  COMPANY_OWNER // kompaniya egasi
-  ADMIN // kompaniya administratori
-  MANAGER // filial/bulim boshqaruvchisi
-  SELLER // kassir/sotuvchi
-  COOK // oshpaz
-  WAITER // ofitsiant
-  DELIVERY // yetkazib beruvchi
-  CUSTOMER // oddiy mijoz
-  ACCOUNTANT // buxgalter
-  STOCK_MANAGER // ombor mudiri
+  SUPER_ADMIN
+  COMPANY_OWNER
+  ADMIN
+  MANAGER
+  SELLER
+  COOK
+  WAITER
+  DELIVERY
+  CUSTOMER
+  ACCOUNTANT
+  STOCK_MANAGER
 }
 
-/// ===== Buyurtma statuslari =====
 enum OrderStatus {
-  PENDING /// Buyurtma qabul qilingan, lekin hali tasdiqlanmagan
-  CONFIRMED /// Admin/Seller tomonidan tasdiqlangan
-  IN_PROGRESS /// Jarayonda (tayyorlanmoqda yoki yig'ilmoqda)
-  READY /// Tayyor, yetkazishga/olib ketishga hozir
-  ON_THE_WAY /// Yetkazib berilmoqda
-  COMPLETED /// Muvaffaqiyatli tugagan
-  CANCELLED /// Bekor qilingan (mijoz yoki tizim tomonidan)
-  RETURNED /// Mijoz qaytargan (agar savdo tizimi bo‘lsa)
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  READY
+  ON_THE_WAY
+  COMPLETED
+  CANCELLED
+  RETURNED
 }
 
 enum RequestStatus {
-  PENDING /// So'rov qabul qilingan, lekin hali tasdiqlanmagan
-  IN_PROGRESS /// Jarayonda (ko'rib chiqilmoqda yoki tekshirilmoqda)
-  CONFIRMED /// Qabul qiluvchi tomonidan tasdiqlangan
-  CANCELLED /// Bekor qilingan (mijoz yoki kompaniya tomonidan)
+  PENDING
+  IN_PROGRESS
+  CONFIRMED
+  CANCELLED
 }
 
-/// ===== Kompaniya turlari =====
 enum CompanyType {
   CAFE
   MARKET
+  STORAGE
 }
 
-/// ===== USER MANAGEMENT =====
+enum LocationType {
+  COMPANY
+  BRANCH
+  STORAGE
+}
+
+enum TransferStatus {
+  DRAFT
+  SENT
+  RECEIVED
+  CANCELLED
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// User Management
+// ────────────────────────────────────────────────────────────────────────────────
+
 model User {
-  id           Int      @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   firstName    String?
   lastName     String?
   middleName   String?
-  nickname     String   @unique
-  phone        String   @unique
+  nickname     String    @unique
+  phone        String    @unique
   secondPhone  String?
-  password     String?  @db.VarChar(255)
-  companyLimit Int      @default(1)
+  password     String?   @db.VarChar(255)
+  companyLimit Int       @default(1)
   salary       Int?
   avatarUrl    String?
   bio          String?
   adress       Json?
-  emails       String[]
-  phones       String[]
+  emails       String[]  @default([])
+  phones       String[]  @default([])
 
-  // xavfsizlik
-  isActive    Boolean @default(true)
-  isLoggedIn  Boolean @default(true)
+  // security
+  isActive    Boolean  @default(true)
+  isLoggedIn  Boolean  @default(true)
   activeToken String?
   ipAddress   String?
   deviceName  String?
@@ -136,30 +163,41 @@ model UserPending {
   token    String
   status   Boolean @default(true)
 
-  @@id(phone)
+  @@id([phone])
 }
 
-/// ===== COMPANY & CATEGORY =====
+// ────────────────────────────────────────────────────────────────────────────────
+// Company & Membership
+// ────────────────────────────────────────────────────────────────────────────────
+
 model Company {
   id         Int         @id @default(autoincrement())
   name       String      @unique
   desc       String?
-  address    Json? // { city: "", zip: "", street: "" }
-  mainPhone  String
-  phones     String[]
+  address    Json?
+  mainPhone  String?
+  phones     String[]    @default([])
   bannerUrl  String?
   logoUrl    String?
-  emails     String[]
+  emails     String[]    @default([])
   websiteUrl String?
   type       CompanyType
   isActive   Boolean     @default(true)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
+  companyId  Int?
+  isBranch   Boolean     @default(false)
 
-  products        Product[]
-  userInCompanies UserInCompany[]
+  // Relations
+  categoryInCompanies CategoryInCompany[]
+  products            Product[]
+  userInCompanies     UserInCompany[]
+  branches            Branch[]
+  storages            CompanyOnStorage[]
+  locations           InventoryLocation[] // COMPANY-type locations
 
   @@index([name, mainPhone])
+  ProductInCompany ProductInCompany[]
 }
 
 model UserInCompany {
@@ -167,10 +205,70 @@ model UserInCompany {
   user      User    @relation(fields: [userId], references: [id])
   companyId Int
   company   Company @relation(fields: [companyId], references: [id])
-  roles     Role[]
+  roles     Role[]  @default([])
 
-  @@id([userId, companyId]) // bir user bitta kompaniyada faqat 1 marta bo‘ladi
+  @@id([userId, companyId])
 }
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Branch & Storage
+// ────────────────────────────────────────────────────────────────────────────────
+
+model Branch {
+  id         Int       @id @default(autoincrement())
+  name       String
+  desc       String?
+  address    Json?
+  mainPhone  String?
+  phones     String[]  @default([])
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  companyId  Int
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  locations  InventoryLocation[] // BRANCH-type locations
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@index([name, mainPhone])
+}
+
+model Storage {
+  id         Int                 @id @default(autoincrement())
+  name       String
+  desc       String?
+  address    Json?
+  mainPhone  String?
+  phones     String[]            @default([])
+  isActive   Boolean             @default(true)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  companies  CompanyOnStorage[]
+  locations  InventoryLocation[] // STORAGE-type locations
+
+  @@unique([name])
+  @@index([isActive])
+}
+
+model CompanyOnStorage {
+  companyId Int
+  storageId Int
+  isPrimary Boolean  @default(false)
+  linkedAt  DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  storage Storage @relation(fields: [storageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([companyId, storageId])
+  @@index([storageId])
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Catalog (Category/SubCategory/Product)
+// ────────────────────────────────────────────────────────────────────────────────
 
 model Category {
   id          Int      @id @default(autoincrement())
@@ -179,8 +277,22 @@ model Category {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  subcategories SubCategory[]
-  products      Product[]
+  subcategories       SubCategory[]
+  products            Product[]
+  categoryInCompanies CategoryInCompany[]
+  ProductInCompany    ProductInCompany[]
+}
+
+model CategoryInCompany {
+  id         Int @id @default(autoincrement())
+  categoryId Int
+  companyId  Int
+
+  category Category @relation(fields: [categoryId], references: [id])
+  company  Company  @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, categoryId])
+  @@index([companyId])
 }
 
 model SubCategory {
@@ -190,57 +302,90 @@ model SubCategory {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  categoryId Int
-  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  products   Product[]
+  categoryId       Int
+  category         Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  products         Product[]
+  ProductInCompany ProductInCompany[]
 
-  @@unique([name, categoryId]) // Har bir kategoriya uchun subkategoriya nomi noyib bo'lishi kerak
+  @@unique([name, categoryId])
 }
 
-/// ===== PRODUCT =====
 model Product {
+  id          Int         @id @default(autoincrement())
+  name        String
+  minAge      Int         @default(0)
+  maxAge      Int         @default(100)
+  tags        String[]    @default([])
+  dimensions  String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  seasonality Seasonality @default(ALL_YEAR)
+
+  productInCompanies ProductInCompany[]
+  ProductInOrder     ProductInOrder[]
+
+  categoryId  Int?
+  category    Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  subCategoryId Int?
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  companyId Int?
+  Company   Company? @relation(fields: [companyId], references: [id])
+
+  stocks    Stock[]
+
+  @@index([name])
+  @@index([tags])
+  @@index([seasonality])
+  TransferItem TransferItem[]
+}
+
+// Product configuration at a specific Company (price/stock thresholds/images etc.)
+model ProductInCompany {
   id            Int       @id @default(autoincrement())
-  name          String
+  productId     Int
+  companyId     Int
+  categoryId    Int?
+  subCategoryId Int?
   barcode       String?   @unique
   description   String?
-  price         Decimal   @default(0.0)
-  discountPrice Decimal?
+  price         Decimal   @db.Decimal(12, 2) @default(0)
+  discountPrice Decimal?  @db.Decimal(12, 2)
   stock         Int       @default(0)
+  lowStock      Int       @default(3)
   isFeatured    Boolean   @default(false)
   minAge        Int       @default(0)
   maxAge        Int       @default(100)
-  tags          String[]
-  images        String[]
-  weight        Decimal?
-  dimensions    String?
+  images        String[]  @default([])
+  weight        Decimal?  @db.Decimal(12, 3)
   viewCount     Int       @default(0)
-  soldCount     Int       @default(0)
   publishedAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  status      ProductStatus @default(ACTIVE)
-  unit        Unit          @default(PIECE)
-  seasonality Seasonality   @default(ALL_YEAR)
-  currency    Currency      @default(UZS)
+  status   ProductStatus @default(ACTIVE)
+  unit     Unit          @default(PIECE)
+  currency Currency      @default(UZS)
 
   // Relations
-  companyId Int?
-  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  subCategory SubCategory? @relation(fields: [subCategoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-  categoryId Int?
-  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-
-  subCategoryId  Int?
-  subCategory    SubCategory?     @relation(fields: [subCategoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   ProductInOrder ProductInOrder[]
 
   @@index([status])
   @@index([companyId])
   @@index([price])
-  @@index([tags])
   @@index([isFeatured])
+  @@unique([companyId, productId])
 }
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Orders & Assignments
+// ────────────────────────────────────────────────────────────────────────────────
 
 model Order {
   id        Int         @id @default(autoincrement())
@@ -248,18 +393,15 @@ model Order {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  // Bog'lanishlar
-  assignments OrderAssignment[]
-
-  ProductInOrder ProductInOrder[]
+  assignments     OrderAssignment[]
+  ProductInOrder  ProductInOrder[]
 }
 
 model OrderAssignment {
-  id      Int  @id @default(autoincrement())
-  orderId Int
-  userId  Int
-  role    Role // qaysi rol bilan qatnashgani (DELIVERY, COOK, SELLER, ...)
-
+  id        Int   @id @default(autoincrement())
+  orderId   Int
+  userId    Int
+  role      Role // DELIVERY, COOK, SELLER, ...
   assignedAt DateTime @default(now())
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -267,19 +409,95 @@ model OrderAssignment {
 
   products ProductInOrder[]
 
-  @@unique([orderId, userId, role]) // Bir foydalanuvchi bir orderga bir xil rol bilan faqat 1 marta qo‘shiladi
+  @@unique([orderId, userId, role])
 }
 
 model ProductInOrder {
   id        Int     @id @default(autoincrement())
   orderId   Int
   productId Int
-  quantity  Int     @default(1) // nechtaligini saqlash uchun
-  price     Decimal // o‘sha paytdagi narx (mahsulot narxi keyin o‘zgarsa ham buyurtma o‘zgarmaydi)
+  quantity  Int     @default(1)
+  price     Decimal @db.Decimal(12, 2) // snapshot narx
 
-  order           Order             @relation(fields: [orderId], references: [id])
-  product         Product           @relation(fields: [productId], references: [id])
-  OrderAssignment OrderAssignment[]
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 
-  @@unique([orderId, productId]) // bir buyurtmada bir xil mahsulot faqat 1 marta yoziladi
+  OrderAssignment    OrderAssignment[]
+
+  productInStorageId Int?
+  ProductInCompany   ProductInCompany? @relation(fields: [productInCompanyId], references: [id])
+  productInCompanyId Int?
+
+  @@unique([orderId, productId])
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Inventory (Universal Locations, Stocks, Transfers)
+// ────────────────────────────────────────────────────────────────────────────────
+
+model InventoryLocation {
+  id        Int          @id @default(autoincrement())
+  type      LocationType
+  companyId Int?
+  branchId  Int?
+  storageId Int?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  company Company? @relation(fields: [companyId], references: [id])
+  branch  Branch?  @relation(fields: [branchId], references: [id])
+  storage Storage? @relation(fields: [storageId], references: [id])
+
+  stocks        Stock[]
+  fromTransfers Transfer[] @relation("FromLocation")
+  toTransfers   Transfer[] @relation("ToLocation")
+
+  @@index([type])
+  @@index([companyId])
+  @@index([branchId])
+  @@index([storageId])
+}
+
+model Stock {
+  id          Int                @id @default(autoincrement())
+  locationId  Int
+  productId   Int
+  quantity    Int                @default(0)
+
+  location InventoryLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  product  Product           @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([locationId, productId])
+  @@index([productId])
+}
+
+model Transfer {
+  id             Int                @id @default(autoincrement())
+  fromLocationId Int
+  toLocationId   Int
+  status         TransferStatus     @default(DRAFT)
+  note           String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  fromLocation InventoryLocation @relation("FromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
+  toLocation   InventoryLocation @relation("ToLocation",   fields: [toLocationId],   references: [id], onDelete: Restrict)
+
+  items TransferItem[]
+
+  @@index([fromLocationId])
+  @@index([toLocationId])
+}
+
+model TransferItem {
+  id         Int      @id @default(autoincrement())
+  transferId Int
+  productId  Int
+  quantity   Int      @default(1)
+
+  transfer Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@unique([transferId, productId])
 }
