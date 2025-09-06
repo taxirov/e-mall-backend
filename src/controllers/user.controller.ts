@@ -5,6 +5,7 @@ import { UserService } from '../services/user.service';
 // import TelegramBot, { Contact } from "node-telegram-bot-api";
 import jwt from 'jsonwebtoken';
 import prisma from '../database';
+import { Role } from '@prisma/client';
 
 
 // const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN!, { polling: true });
@@ -73,6 +74,41 @@ import prisma from '../database';
 const userService = new UserService();
 
 export class UserController {
+
+    // async telegramVerify(req: Request, res: Response) {
+    //     try {
+    //         const { code } = req.body;
+    //         const userPending = (await userService.getTelegramUser(code))[0]
+    //         if (userPending) {
+    //             if (userPending.username) {
+    //                 const userCreated = await userService.create({ nickname: userPending.username, phone: userPending.phone })
+    //                 const token = jwt.sign({ nickname: userPending.username, phone: userPending.phone }, process.env.SECRET_KEY!, { expiresIn: "7d" })
+    //                 const userWithToken = await userService.setToken({ phone: userCreated.phone, token })
+    //                 await userService.deactiveTelegramUser(userPending.id)
+    //                 res.status(200).json({
+    //                     message: "Ro'yhatdan o'tish muvafaqqiyatli yakunlandi!",
+    //                     userWithToken
+    //                 })
+    //             } else {
+    //                 const userCreated = await userService.create({ nickname: `u${userPending.phone}`, phone: userPending.phone })
+    //                 const token = jwt.sign({ nickname: userCreated.nickname, phone: userCreated.phone }, process.env.SECRET_KEY!, { expiresIn: "7d" })
+    //                 const userWithToken = await userService.setToken({ phone: userCreated.phone, token })
+    //                 await userService.deactiveTelegramUser(userPending.id)
+    //                 res.status(200).json({
+    //                     message: "Ro'yhatdan o'tish muvafaqqiyatli yakunlandi!",
+    //                     userWithToken
+    //                 })
+    //             }
+
+    //         } else {
+    //             res.status(403).json({
+    //                 message: "Kod eskirgan"
+    //             })
+    //         }
+    //     } catch (error) { }
+    // }
+
+    // POST /users
     async registerViaOtp(req: Request, res: Response) {
         try {
             const { nickname, phone, password } = req.body;
@@ -138,78 +174,254 @@ export class UserController {
             })
         }
     }
-    // async telegramVerify(req: Request, res: Response) {
-    //     try {
-    //         const { code } = req.body;
-    //         const userPending = (await userService.getTelegramUser(code))[0]
-    //         if (userPending) {
-    //             if (userPending.username) {
-    //                 const userCreated = await userService.create({ nickname: userPending.username, phone: userPending.phone })
-    //                 const token = jwt.sign({ nickname: userPending.username, phone: userPending.phone }, process.env.SECRET_KEY!, { expiresIn: "7d" })
-    //                 const userWithToken = await userService.setToken({ phone: userCreated.phone, token })
-    //                 await userService.deactiveTelegramUser(userPending.id)
-    //                 res.status(200).json({
-    //                     message: "Ro'yhatdan o'tish muvafaqqiyatli yakunlandi!",
-    //                     userWithToken
-    //                 })
-    //             } else {
-    //                 const userCreated = await userService.create({ nickname: `u${userPending.phone}`, phone: userPending.phone })
-    //                 const token = jwt.sign({ nickname: userCreated.nickname, phone: userCreated.phone }, process.env.SECRET_KEY!, { expiresIn: "7d" })
-    //                 const userWithToken = await userService.setToken({ phone: userCreated.phone, token })
-    //                 await userService.deactiveTelegramUser(userPending.id)
-    //                 res.status(200).json({
-    //                     message: "Ro'yhatdan o'tish muvafaqqiyatli yakunlandi!",
-    //                     userWithToken
-    //                 })
-    //             }
 
-    //         } else {
-    //             res.status(403).json({
-    //                 message: "Kod eskirgan"
-    //             })
-    //         }
-    //     } catch (error) { }
-    // }
-    async login(req: Request, res: Response) {
+    // GET /users/:id
+    async getById(req: Request, res: Response) {
         try {
-            const { nickname, password } = req.body;
-            const userExsist = await userService.findByNickname(nickname);
-            if (!userExsist) {
-                res.status(404).json({
-                    message: "Foydalanuvchi topilmadi"
-                })
-            } else {
-                if (userExsist.isActive == false) {
-                    res.status(403).json({
-                        message: "Sizning statusingiz faol emas. Iltimos admin bilan bog'laning!"
-                    })
-                } else {
-                    if (password === userExsist.password) {
-                        const token = jwt.sign({ nickname: userExsist.nickname, phone: userExsist.phone }, process.env.SECRET_KEY!, { expiresIn: "7d" })
-                        let userIpAddress =
-                            (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
-                            req.socket.remoteAddress || null;
-
-                        if (userIpAddress?.startsWith("::ffff:")) {
-                            userIpAddress = userIpAddress.replace("::ffff:", "");
-                        }
-                        const userDeviceName = (req.useragent?.os ? req.useragent?.os : null);
-                        const userWithToken = await userService.setToken(userExsist.id, token, userIpAddress, userDeviceName)
-                        res.status(200).json({
-                            message: "Login muvaffaqiyatli",
-                            user: userWithToken
-                        })
-                    } else {
-                        res.status(401).json({
-                            message: "Parol xato! Iltimos qayta urinib ko'ring"
-                        })
-                    }
-                }
-            }
-        } catch (error) {
-            res.status(500).json({
-                message: "Error login user"
-            })
+            const id = Number(req.params.id);
+            if (!id) return res.status(400).json({ message: "id talab qilinadi" });
+            const user = await userService.getById(id);
+            if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+            res.json(user);
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
         }
     }
+
+    // GET /users
+    async getAll(req: Request, res: Response) {
+        try {
+            const {
+                page,
+                limit,
+                search,
+                isActive,
+                isLoggedIn,
+                rolesAny,
+                rolesAll,
+                createdFrom,
+                createdTo,
+                salaryMin,
+                salaryMax,
+                companyId,
+                orderBy,
+                sort,
+            } = req.body;
+
+            // helperlar
+            const toBool = (v: any) =>
+                typeof v === "string" ? (v.toLowerCase() === "true" ? true : v.toLowerCase() === "false" ? false : undefined) : undefined;
+
+            const parseRoles = (v: any): Role[] | undefined => {
+                if (!v) return undefined;
+                if (Array.isArray(v)) return v as Role[];
+                if (typeof v === "string") return v.split(",").map((s) => s.trim()) as Role[];
+                return undefined;
+            };
+
+            const params = {
+                page: page ? Number(page) : undefined,
+                limit: limit ? Number(limit) : undefined,
+                search: (search as string) ?? undefined,
+                isActive: toBool(isActive),
+                isLoggedIn: toBool(isLoggedIn),
+                rolesAny: parseRoles(rolesAny),
+                rolesAll: parseRoles(rolesAll),
+                createdFrom: (createdFrom as string) ?? undefined,
+                createdTo: (createdTo as string) ?? undefined,
+                salaryMin: salaryMin ? Number(salaryMin) : undefined,
+                salaryMax: salaryMax ? Number(salaryMax) : undefined,
+                companyId: companyId ? Number(companyId) : undefined,
+                orderBy: (orderBy as "createdAt" | "updatedAt" | "firstName" | "lastName" | "nickname") ?? undefined,
+                sort: (sort as "asc" | "desc") ?? undefined,
+            };
+
+            const result = await userService.getAll(params);
+            res.json(result);
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+
+    // GET /users/by-phone?phone=
+    async findByPhone(req: Request, res: Response) {
+        try {
+            const phone = req.query.phone as string;
+            if (!phone) return res.status(400).json({ message: "phone talab qilinadi" });
+            const user = await userService.findByPhone(phone);
+            if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+            res.json(user);
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+
+    // GET /users/by-nickname?nickname=
+    async findByNickname(req: Request, res: Response) {
+        try {
+            const nickname = req.query.nickname as string;
+            if (!nickname) return res.status(400).json({ message: "nickname talab qilinadi" });
+            const user = await userService.findByNickname(nickname);
+            if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+            res.json(user);
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+
+    // PATCH /users/:id/password
+    async updatePassword(req: Request, res: Response) {
+        try {
+            const { id, password } = req.body;
+            if (!id || !password) {
+                return res.status(400).json({ message: "id va password talab qilinadi" });
+            }
+            const userExsist = await userService.findById(id)
+
+            if (!userExsist) { res.status(404).json({ message: "Foydalanuvchi topilmadi" }) }
+            else {
+                const user = await userService.updatePassword(id, password);
+                res.json(user);
+            }
+
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+
+    // PATCH /users/:id
+    async edit(req: Request, res: Response) {
+        try {
+
+            const {
+                id,
+                firstName,
+                lastName,
+                middleName,
+                secondPhone,
+                bio,
+                adress,
+                emails,
+                phones,
+                salary,
+            } = req.body;
+
+            if (!id) return res.status(400).json({ message: "id talab qilinadi" });
+
+            const user = await userService.edit(id, {
+                firstName: firstName ?? null,
+                lastName: lastName ?? null,
+                middleName: middleName ?? null,
+                secondPhone: secondPhone ?? null,
+                bio: bio ?? null,
+                adress: adress ?? null,
+                emails,
+                phones,
+                salary: salary ?? null,
+            });
+
+            res.json(user);
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+
+    // PATCH /users/:id/image
+    async setImage(req: Request, res: Response) {
+        try {
+            const id = Number(req.params.id);
+            const { avatarUrl } = req.body;
+            if (!id) return res.status(400).json({ message: "id talab qilinadi" });
+            const user = await userService.setImage(id, avatarUrl ?? null);
+            res.json(user);
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+
+    // PATCH /users/:id/active
+    async setActive(req: Request, res: Response) {
+        try {
+            const id = Number(req.params.id);
+            const { isActive } = req.body;
+            if (typeof isActive !== "boolean" || !id) {
+                return res.status(400).json({ message: "id va isActive (boolean) talab qilinadi" });
+            }
+            const user = await userService.setActive(id, isActive);
+            res.json(user);
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+
+    // PUT /users/:id/roles
+    async setRoles(req: Request, res: Response) {
+        try {
+            const id = Number(req.params.id);
+            const { roles } = req.body as { roles: Role[] };
+            if (!id || !Array.isArray(roles) || roles.length === 0) {
+                return res.status(400).json({ message: "id va roles talab qilinadi" });
+            }
+            const user = await userService.setRoles(id, roles);
+            res.json(user);
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+
+    // POST /telegram/users
+    // async createTelegramUser(req: Request, res: Response) {
+    //     try {
+    //         const { phone, code, name, username, chatId } = req.body;
+    //         if (!phone || !code || !chatId) {
+    //             return res.status(400).json({ message: "phone, code va chatId talab qilinadi" });
+    //         }
+    //         const tg = await userService.createTelegramUser(
+    //             phone,
+    //             Number(code),
+    //             name ?? null,
+    //             username ?? null,
+    //             String(chatId)
+    //         );
+    //         res.status(201).json(tg);
+    //     } catch (e) {
+    //         console.error(e);
+    //         res.status(500).json({ message: "Internal Server Error" });
+    //     }
+    // }
+
+    // // GET /telegram/users?code=
+    // async getTelegramUser(req: Request, res: Response) {
+    //     try {
+    //         const code = Number(req.query.code);
+    //         if (!code) return res.status(400).json({ message: "code talab qilinadi" });
+    //         const list = await userService.getTelegramUser(code);
+    //         res.json(list);
+    //     } catch (e) {
+    //         console.error(e);
+    //         res.status(500).json({ message: "Internal Server Error" });
+    //     }
+    // }
+
+    // // POST /telegram/users/:id/deactivate
+    // async deactiveTelegramUser(req: Request, res: Response) {
+    //     try {
+    //         const id = Number(req.params.id);
+    //         if (!id) return res.status(400).json({ message: "id talab qilinadi" });
+    //         const item = await userService.deactiveTelegramUser(id);
+    //         res.json(item);
+    //     } catch (e) {
+    //         console.error(e);
+    //         res.status(500).json({ message: "Internal Server Error" });
+    //     }
+    // }
 }
