@@ -11,7 +11,7 @@ app.use(useragent.express())
 
 app.use(cors({
   origin: '*',
-  allowedHeaders: ['Content-Type', 'Access-Token', 'Admin-Key'],
+  allowedHeaders: ['Content-Type', 'Admin-Key', "Authorization"],
   credentials: true
 },
 ));
