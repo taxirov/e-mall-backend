@@ -304,11 +304,36 @@ export class UserController {
     // GET /users/by-nickname?nickname=
     async findByNickname(req: Request, res: Response) {
         try {
-            const nickname = req.query.nickname as string;
+            const nickname = req.body.nickname as string;
             if (!nickname) return res.status(400).json({ message: "nickname talab qilinadi" });
             const user = await userService.findByNickname(nickname);
             if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
-            res.json(user);
+            res.status(200).json(user);
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+
+    async checkNicknameCreated(req: Request, res: Response) {
+        try {
+            const nickname = req.body.nickname as string;
+            if (!nickname) return res.status(400).json({ message: "nickname talab qilinadi" });
+            const user = await userService.findByNickname(nickname);
+            if (!user) return res.status(404).json({ message: "nickname ochiq" });
+            res.status(200).json({ message: "nickname band qilingan" });
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+    async checkPhoneCreated(req: Request, res: Response) {
+        try {
+            const phone = req.body.phone as string;
+            if (!phone) return res.status(400).json({ message: "phone talab qilinadi" });
+            const user = await userService.findByPhone(phone);
+            if (!user) return res.status(404).json({ message: "phone ochiq" });
+            res.status(200).json({ message: "phone band qilingan" });
         } catch (e) {
             console.error(e);
             res.status(500).json({ message: "Internal Server Error" });
