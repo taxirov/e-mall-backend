@@ -183,37 +183,41 @@ export class UserController {
         }
     }
     async verifyOtp(req: Request, res: Response) {
-        const { otp } = req.body;
+        try {
+            const { otp } = req.body;
 
-        // if (!res.locals.otp || !res.locals.pendingUser) {
-        //     return res.status(400).json({ error: "Foydalanuchi topilmadi" });
-        // }
+            // if (!res.locals.otp || !res.locals.pendingUser) {
+            //     return res.status(400).json({ error: "Foydalanuchi topilmadi" });
+            // }
 
-        // if (res.locals.otpExpire < Date.now()) {
-        //     return res.status(400).json({ error: "Kod muddati tugagan" });
-        // }
+            // if (res.locals.otpExpire < Date.now()) {
+            //     return res.status(400).json({ error: "Kod muddati tugagan" });
+            // }
 
-        const userPending = await prisma.userPending.findUnique({ where: { phone: res.locals.payload.phone, status: true } })
-        if (!userPending) {
-            res.status(403).json({
-                message: "Kod eskirgan"
-            })
-        } else {
-            let userIpAddress =
-                (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
-                req.socket.remoteAddress || null;
+            const userPending = await prisma.userPending.findUnique({ where: { phone: res.locals.payload.phone, status: true } })
+            if (!userPending) {
+                res.status(403).json({
+                    message: "Kod eskirgan"
+                })
+            } else {
+                let userIpAddress =
+                    (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
+                    req.socket.remoteAddress || null;
 
-            if (userIpAddress?.startsWith("::ffff:")) {
-                userIpAddress = userIpAddress.replace("::ffff:", "");
+                if (userIpAddress?.startsWith("::ffff:")) {
+                    userIpAddress = userIpAddress.replace("::ffff:", "");
+                }
+                const userDeviceName = (req.useragent?.platform ? req.useragent?.platform : null);
+                const userCreated = await userService.create(userPending!.nickname, userPending!.phone, userPending!.password)
+                const userWithToken = await userService.setToken(userCreated.id, userPending!.token, userIpAddress, userDeviceName)
+                await prisma.userPending.update({ where: { phone: userPending!.phone }, data: { status: false } })
+                res.status(200).json({
+                    message: "Ro'yhatdan o'tish muvafaqqiyatli yakunlandi!",
+                    user: userWithToken
+                })
             }
-            const userDeviceName = (req.useragent?.os ? req.useragent?.os : null);
-            const userCreated = await userService.create(userPending!.nickname, userPending!.phone, userPending!.password)
-            const userWithToken = await userService.setToken(userCreated.id, userPending!.token, userIpAddress, userDeviceName)
-            await prisma.userPending.update({ where: { phone: userPending!.phone }, data: { status: false } })
-            res.status(200).json({
-                message: "Ro'yhatdan o'tish muvafaqqiyatli yakunlandi!",
-                user: userWithToken
-            })
+        } catch (error) {
+            res.json({ message: "Internal Server Error", error })
         }
     }
 
