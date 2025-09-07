@@ -224,7 +224,7 @@ export class UserController {
     // GET /users/:id
     async getById(req: Request, res: Response) {
         try {
-            const id = Number(req.params.id);
+            const id = req.body.id as number;
             if (!id) return res.status(400).json({ message: "id talab qilinadi" });
             const user = await userService.getById(id);
             if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });

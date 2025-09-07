@@ -11,9 +11,9 @@ r.post("/user/register", c.registerViaOtp.bind(c));
 r.post('/user/verify-otp', checkToken, c.verifyOtp.bind(c))
 r.post("/user/login", c.login.bind(c));
 r.post("/user", checkToken, c.getAll.bind(c));
-r.get("/user/:id", c.getById.bind(c));
-r.post("/user/edit", c.edit.bind(c));
-r.patch("/user/reset-password", c.updatePassword.bind(c));
+r.get("/user/id", checkToken, c.getById.bind(c));
+r.post("/user/edit", checkToken, c.edit.bind(c));
+r.patch("/user/reset-password", checkToken, c.updatePassword.bind(c));
 // r.patch("/user/:id/image", c.setImage.bind(c));
 // r.patch("/user/:id/active", c.setActive.bind(c));
 
