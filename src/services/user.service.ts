@@ -151,6 +151,9 @@ export class UserService {
     async findByNickname(nickname: string) {
         return await prisma.user.findUnique({ where: { nickname }, select: PublicUserSelect })
     }
+    async findByNicknameWithPassword(nickname: string) {
+        return await prisma.user.findUnique({ where: { nickname } })
+    }
     async updatePassword(id: number, password: string) {
         return await prisma.user.update({ where: { id }, data: { password }, select: UserSelect })
     }

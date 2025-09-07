@@ -8,7 +8,7 @@ const c = new UserController();
 // Users
 r.post("/user/register", c.registerViaOtp.bind(c));
 r.post('/user/verify-otp', c.verifyOtp.bind(c))
-r.post("/user/login", c.registerViaOtp.bind(c));
+r.post("/user/login", c.login.bind(c));
 r.post("/user", c.getAll.bind(c));
 r.get("/user/:id", c.getById.bind(c));
 r.post("/user/edit", c.edit.bind(c));

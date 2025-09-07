@@ -75,6 +75,48 @@ const userService = new UserService();
 
 export class UserController {
 
+    async login(req: Request, res: Response) {
+        try {
+            const { nickname, password } = req.body;
+            const userExsist = await userService.findByNicknameWithPassword(nickname);
+            if (!userExsist) {
+                res.status(404).json({
+                    message: "Foydalanuvchi topilmadi"
+                })
+            } else {
+                if (userExsist.isActive == false) {
+                    res.status(403).json({
+                        message: "Sizning statusingiz faol emas. Iltimos admin bilan bog'laning!"
+                    })
+                } else {
+                    if (password === userExsist.password) {
+                        const token = jwt.sign({ nickname: userExsist.nickname, phone: userExsist.phone }, process.env.SECRET_KEY!, { expiresIn: "7d" })
+                        let userIpAddress =
+                            (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
+                            req.socket.remoteAddress || null;
+
+                        if (userIpAddress?.startsWith("::ffff:")) {
+                            userIpAddress = userIpAddress.replace("::ffff:", "");
+                        }
+                        const userDeviceName = (req.useragent?.platform ? req.useragent?.platform : null);
+                        const userWithToken = await userService.setToken(userExsist.id, token, userIpAddress, userDeviceName)
+                        res.status(200).json({
+                            message: "Login muvaffaqiyatli",
+                            user: userWithToken
+
+                        })
+                    } else {
+                        res.status(401).json({
+                            message: "Parol xato! Iltimos qayta urinib ko'ring"
+                        })
+                    }
+                }
+            }
+        } catch (error) {
+            res.status(500).json(error)
+        }
+    }
+
     // async telegramVerify(req: Request, res: Response) {
     //     try {
     //         const { code } = req.body;

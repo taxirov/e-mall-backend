@@ -3,7 +3,10 @@ import jwt from 'jsonwebtoken';
 
 export async function checkToken(req: Request, res: Response, next: NextFunction) {
     try {
-        const token = req.header('authorization')
+        const authHeader = req.header("Authorization");
+        const token = authHeader && authHeader.startsWith("Bearer ")
+            ? authHeader.split(" ")[1]
+            : null;
         if (!token) {
             res.status(403).json({
                 message: "Token not provided"
