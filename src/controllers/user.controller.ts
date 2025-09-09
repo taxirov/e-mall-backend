@@ -294,7 +294,7 @@ export class UserController {
     // GET /users/by-phone?phone=
     async findByPhone(req: Request, res: Response) {
         try {
-            const phone = req.body.phone as string;
+            const { phone } = req.body;
             if (!phone) return res.status(400).json({ message: "phone talab qilinadi" });
             const user = await userService.findByPhone(phone);
             if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
@@ -308,7 +308,7 @@ export class UserController {
     // GET /users/by-nickname?nickname=
     async findByNickname(req: Request, res: Response) {
         try {
-            const nickname = req.body.nickname as string;
+            const { nickname } = req.body;
             if (!nickname) return res.status(400).json({ message: "nickname talab qilinadi" });
             const user = await userService.findByNickname(nickname);
             if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
@@ -321,7 +321,7 @@ export class UserController {
 
     async checkNicknameCreated(req: Request, res: Response) {
         try {
-            const nickname = req.body.nickname as string;
+            const { nickname } = req.body;
             if (!nickname) return res.status(400).json({ message: "nickname talab qilinadi" });
             const user = await userService.findByNickname(nickname);
             if (!user) return res.status(404).json({ message: "nickname ochiq" });
@@ -333,7 +333,7 @@ export class UserController {
     }
     async checkPhoneCreated(req: Request, res: Response) {
         try {
-            const phone = req.body.phone as string;
+            const { phone } = req.body;
             if (!phone) return res.status(400).json({ message: "phone talab qilinadi" });
             const user = await userService.findByPhone(phone);
             if (!user) return res.status(404).json({ message: "phone ochiq" });
