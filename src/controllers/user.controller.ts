@@ -294,7 +294,7 @@ export class UserController {
     // GET /users/by-phone?phone=
     async findByPhone(req: Request, res: Response) {
         try {
-            const phone = req.query.phone as string;
+            const phone = req.body.phone as string;
             if (!phone) return res.status(400).json({ message: "phone talab qilinadi" });
             const user = await userService.findByPhone(phone);
             if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });

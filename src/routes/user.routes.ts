@@ -18,10 +18,10 @@ r.patch("/user/reset-password", checkToken, c.updatePassword.bind(c));
 // r.patch("/user/:id/active", c.setActive.bind(c));
 
 // Finders
-r.get("/user/phone", checkToken, c.findByPhone.bind(c));
-r.get("/user/nickname", checkToken, c.findByNickname.bind(c));
-r.get("/user/nickname-check", c.checkNicknameCreated.bind(c));
-r.get("/user/phone-check", c.checkPhoneCreated.bind(c));
+r.post("/user/phone", checkToken, c.findByPhone.bind(c));
+r.post("/user/nickname", checkToken, c.findByNickname.bind(c));
+r.post("/user/nickname-check", c.checkNicknameCreated.bind(c));
+r.post("/user/phone-check", c.checkPhoneCreated.bind(c));
 
 // Roles
 // r.put("/user/:id/roles", c.setRoles.bind(c));
