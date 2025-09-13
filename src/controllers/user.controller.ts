@@ -172,13 +172,21 @@ export class UserController {
 
             // await axios.post('https://notify.eskiz.uz/api/message/sms/send', messageData, { headers: { Authorization: 'Bearer ' + process.env.SMS_TOKEN } })
             const token = jwt.sign({ nickname, phone }, process.env.SECRET_KEY!, { expiresIn: "7d" })
-            const userPending = await prisma.userPending.create({ data: { phone, password, nickname, token, otp } })
+            // Avoid P2002 on repeated attempts: upsert by phone
+            const userPending = await prisma.userPending.upsert({
+                where: { phone },
+                update: { otp, token, password, nickname, status: true },
+                create: { phone, password, nickname, token, otp }
+            })
             res.status(200).json({
                 message: "Tasdiqlash kodi jo'natildi",
                 token
             })
 
         } catch (error) {
+            if ((error as any)?.code === 'P2002') {
+                return res.status(409).json({ message: 'Pending request already exists for this phone. Try again later or verify OTP.' })
+            }
             res.status(500).json({ error });
         }
     }
