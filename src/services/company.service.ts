@@ -182,6 +182,66 @@ export class CompanyService {
     return created;
   }
 
+  /**
+   * Create a company and ensure the creator becomes COMPANY_OWNER globally
+   * and is linked to the new company as COMPANY_OWNER member.
+   */
+  async createByUser(userId: number, dto: CreateCompanyDto) {
+    if (!userId) return this.create(dto);
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: {
+          name: dto.name.trim(),
+          desc: dto.desc ?? undefined,
+          address: dto.address as Prisma.InputJsonValue | undefined,
+          mainPhone: normalizePhone(dto.mainPhone),
+          phones: normalizeManyPhones(dto.phones),
+          bannerUrl: dto.bannerUrl ?? undefined,
+          logoUrl: dto.logoUrl ?? undefined,
+          emails: dto.emails ?? [],
+          websiteUrl: dto.websiteUrl ?? undefined,
+          type: dto.type,
+          isActive: dto.isActive ?? true,
+          isBranch: dto.isBranch ?? false,
+          companyId: dto.companyId ?? null,
+        },
+      });
+
+      if (dto.categoryIds?.length) {
+        const existing = await tx.categoryInCompany.findMany({
+          where: { companyId: company.id, categoryId: { in: dto.categoryIds } },
+          select: { categoryId: true },
+        });
+        const existingIds = new Set(existing.map((e) => e.categoryId));
+        const toInsert = dto.categoryIds.filter((id) => !existingIds.has(id));
+        if (toInsert.length) {
+          await tx.categoryInCompany.createMany({
+            data: toInsert.map((categoryId) => ({ companyId: company.id, categoryId })),
+          });
+        }
+      }
+
+      // Ensure COMPANY_OWNER in global roles
+      const cur = await tx.user.findUnique({ where: { id: userId }, select: { roles: true } });
+      if (cur) {
+        const merged = Array.from(new Set([...(cur.roles ?? []), 'COMPANY_OWNER' as any]));
+        await tx.user.update({ where: { id: userId }, data: { roles: { set: merged as any } } });
+      }
+
+      // Ensure membership
+      await tx.userInCompany.upsert({
+        where: { userId_companyId: { userId, companyId: company.id } },
+        update: { roles: { set: ['COMPANY_OWNER'] as any } },
+        create: { userId, companyId: company.id, roles: ['COMPANY_OWNER'] as any },
+      });
+
+      return tx.company.findUniqueOrThrow({ where: { id: company.id }, include: companyDefaultInclude });
+    });
+
+    return created;
+  }
+
   // READ ────────────────────────────────────────────────────────────────────────
   async getById(id: number) {
     return this.prisma.company.findUnique({ where: { id }, include: companyDefaultInclude });

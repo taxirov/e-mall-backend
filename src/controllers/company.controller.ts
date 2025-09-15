@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { CompanyService, makeCompanyService } from "../services/company.service";
+import prisma from "../database";
 import { CompanyType, Role } from "@prisma/client";
 
 const service: CompanyService = makeCompanyService();
@@ -7,7 +8,20 @@ const service: CompanyService = makeCompanyService();
 export class CompanyController {
   async create(req: Request, res: Response) {
     try {
-      const company = await service.create(req.body);
+      // Identify current user from JWT payload (nickname or phone)
+      let createdByUserId: number | null = null;
+      const payload = (res.locals as any)?.payload as { nickname?: string; phone?: string } | undefined;
+      if (payload?.nickname) {
+        const u = await prisma.user.findUnique({ where: { nickname: payload.nickname }, select: { id: true } });
+        if (u) createdByUserId = u.id;
+      } else if (payload?.phone) {
+        const u = await prisma.user.findUnique({ where: { phone: payload.phone }, select: { id: true } });
+        if (u) createdByUserId = u.id;
+      }
+
+      const company = createdByUserId
+        ? await service.createByUser(createdByUserId, req.body)
+        : await service.create(req.body);
       res.status(201).json(company);
     } catch (e: any) {
       res.status(400).json({ message: CompanyService.mapPrismaError(e).message });

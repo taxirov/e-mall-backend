@@ -1,5 +1,6 @@
 import prisma from "../database";
 import { Prisma, ProductStatus, Unit, Currency } from "@prisma/client";
+import { emitToCompany } from "../realtime/socket";
 import { CreateProductInCompanyDto, UpdateProductInCompanyDto } from "../models/productInCompany.model";
 
 export class ProductInCompanyService {
@@ -26,7 +27,9 @@ export class ProductInCompanyService {
       unit: dto.unit ?? Unit.PIECE,
       currency: dto.currency ?? Currency.UZS,
     };
-    return prisma.productInCompany.create({ data });
+    const created = await prisma.productInCompany.create({ data });
+    emitToCompany(created.companyId, 'productInCompany:created', created);
+    return created;
   }
 
   async getById(id: number) {
@@ -70,10 +73,14 @@ export class ProductInCompanyService {
       product: dto.productId === undefined ? undefined : { connect: { id: dto.productId } },
       company: dto.companyId === undefined ? undefined : { connect: { id: dto.companyId } },
     };
-    return prisma.productInCompany.update({ where: { id }, data });
+    const updated = await prisma.productInCompany.update({ where: { id }, data });
+    emitToCompany(updated.companyId, 'productInCompany:updated', updated);
+    return updated;
   }
 
   async delete(id: number) {
-    return prisma.productInCompany.delete({ where: { id } });
+    const deleted = await prisma.productInCompany.delete({ where: { id } });
+    emitToCompany(deleted.companyId, 'productInCompany:deleted', deleted);
+    return deleted;
   }
 }

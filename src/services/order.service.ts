@@ -1,5 +1,6 @@
 import prisma from "../database";
 import { OrderStatus, Prisma } from "@prisma/client";
+import { emitToOrder } from "../realtime/socket";
 import { AddAssignmentDto, AddOrderItemDto, CreateOrderDto } from "../models/order.model";
 
 export class OrderService {
@@ -11,7 +12,9 @@ export class OrderService {
           data: dto.items.map((i) => ({ orderId: order.id, productId: i.productId, quantity: i.quantity ?? 1, price: i.price as any, productInCompanyId: i.productInCompanyId ?? null })),
         });
       }
-      return tx.order.findUniqueOrThrow({ where: { id: order.id }, include: { ProductInOrder: true, assignments: true } });
+      const full = await tx.order.findUniqueOrThrow({ where: { id: order.id }, include: { ProductInOrder: true, assignments: true } });
+      emitToOrder(full.id, 'order:created', full);
+      return full;
     });
   }
 
@@ -25,27 +28,36 @@ export class OrderService {
   }
 
   async setStatus(id: number, status: OrderStatus) {
-    return prisma.order.update({ where: { id }, data: { status } });
+    const upd = await prisma.order.update({ where: { id }, data: { status } });
+    emitToOrder(id, 'order:status', upd);
+    return upd;
   }
 
   async addItem(orderId: number, dto: AddOrderItemDto) {
-    return prisma.productInOrder.create({ data: { orderId, productId: dto.productId, quantity: dto.quantity ?? 1, price: dto.price as any, productInCompanyId: dto.productInCompanyId ?? null } });
+    const item = await prisma.productInOrder.create({ data: { orderId, productId: dto.productId, quantity: dto.quantity ?? 1, price: dto.price as any, productInCompanyId: dto.productInCompanyId ?? null } });
+    emitToOrder(orderId, 'order:item:add', item);
+    return item;
   }
 
   async removeItem(orderId: number, productId: number) {
-    return prisma.productInOrder.delete({ where: { orderId_productId: { orderId, productId } } });
+    const del = await prisma.productInOrder.delete({ where: { orderId_productId: { orderId, productId } } });
+    emitToOrder(orderId, 'order:item:remove', del);
+    return del;
   }
 
   async assign(orderId: number, dto: AddAssignmentDto) {
-    return prisma.orderAssignment.upsert({
+    const assign = await prisma.orderAssignment.upsert({
       where: { orderId_userId_role: { orderId, userId: dto.userId, role: dto.role } },
       update: {},
       create: { orderId, userId: dto.userId, role: dto.role },
     });
+    emitToOrder(orderId, 'order:assign', assign);
+    return assign;
   }
 
   async unassign(orderId: number, userId: number, role: string) {
-    return prisma.orderAssignment.delete({ where: { orderId_userId_role: { orderId, userId, role: role as any } } });
+    const un = await prisma.orderAssignment.delete({ where: { orderId_userId_role: { orderId, userId, role: role as any } } });
+    emitToOrder(orderId, 'order:unassign', un);
+    return un;
   }
 }
-

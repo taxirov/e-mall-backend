@@ -1,27 +1,30 @@
 import dotenv from "dotenv";
 dotenv.config();
 import express, { type NextFunction, type Request, type Response } from "express";
+import http from 'http';
 import cors from "cors";
 import useragent from "express-useragent";
 // routes
-import userRoutes from "../src/routes/user.routes";
-import companyRoutes from "../src/routes/company.routes";
-import categoryRoutes from "../src/routes/category.routes";
-import subcategoryRoutes from "../src/routes/subcategory.routes";
-import productRoutes from "../src/routes/product.routes";
-import branchRoutes from "../src/routes/branch.routes";
-import storageRoutes from "../src/routes/storage.routes";
-import inventoryRoutes from "../src/routes/inventory.routes";
-import stockRoutes from "../src/routes/stock.routes";
-import productInCompanyRoutes from "../src/routes/productInCompany.routes";
-import companyOnStorageRoutes from "../src/routes/companyOnStorage.routes";
-import orderRoutes from "../src/routes/order.routes";
-import transferRoutes from "../src/routes/transfer.routes";
-import requestRoutes from "../src/routes/request.routes";
-import notificationRoutes from "../src/routes/notification.routes";
+import userRoutes from "./routes/user.routes";
+import companyRoutes from "./routes/company.routes";
+import categoryRoutes from "./routes/category.routes";
+import subcategoryRoutes from "./routes/subcategory.routes";
+import productRoutes from "./routes/product.routes";
+import branchRoutes from "./routes/branch.routes";
+import storageRoutes from "./routes/storage.routes";
+import inventoryRoutes from "./routes/inventory.routes";
+import stockRoutes from "./routes/stock.routes";
+import productInCompanyRoutes from "./routes/productInCompany.routes";
+import companyOnStorageRoutes from "./routes/companyOnStorage.routes";
+import orderRoutes from "./routes/order.routes";
+import transferRoutes from "./routes/transfer.routes";
+import requestRoutes from "./routes/request.routes";
+import notificationRoutes from "./routes/notification.routes";
 import swaggerUi from "swagger-ui-express";
 import { openapiSpec } from "./config/swagger";
 import { errorHandler, requestLogger } from "./middlewares/logger";
+import { initSocket } from "./realtime/socket";
+import prisma from "./database";
 
 const app = express();
 app.use(useragent.express())
@@ -68,6 +71,22 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 app.use(errorHandler)
 // const httpsServer = https.createServer(credentials, app);
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+const server = http.createServer(app);
+initSocket(server);
+server.listen(port, () => {
+  console.log(`HTTP + Socket.IO server running on :${port}`);
 });
+
+// On boot: Ensure nickname 'saad' has SUPER_ADMIN role
+(async () => {
+  try {
+    const u = await prisma.user.findUnique({ where: { nickname: 'saad' }, select: { id: true, roles: true } });
+    if (u && !(u.roles ?? []).includes('SUPER_ADMIN' as any)) {
+      const merged = Array.from(new Set([...(u.roles ?? []), 'SUPER_ADMIN' as any]));
+      await prisma.user.update({ where: { id: u.id }, data: { roles: { set: merged as any } } });
+      console.log("Ensured 'saad' has SUPER_ADMIN role");
+    }
+  } catch (e) {
+    console.warn('ensure SUPER_ADMIN failed:', e);
+  }
+})();

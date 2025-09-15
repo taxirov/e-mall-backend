@@ -1,5 +1,6 @@
 import prisma from "../database";
 import { Prisma, Seasonality } from "@prisma/client";
+import { emitAll, emitToCompany } from "../realtime/socket";
 import { CreateProductDto, UpdateProductDto } from "../models/product.model";
 
 export class ProductService {
@@ -15,7 +16,10 @@ export class ProductService {
       subCategory: dto.subCategoryId ? { connect: { id: dto.subCategoryId } } : undefined,
       Company: dto.companyId ? { connect: { id: dto.companyId } } : undefined,
     };
-    return prisma.product.create({ data });
+    const created = await prisma.product.create({ data });
+    if (dto.companyId) emitToCompany(dto.companyId, 'product:created', created);
+    else emitAll('product:created', created);
+    return created;
   }
 
   async getById(id: number) {

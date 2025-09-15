@@ -2,6 +2,7 @@ import prisma from "../database";
 import { Prisma, RequestStatus, Role } from "@prisma/client";
 import { CreateRequestDto } from "../models/request.model";
 import { NotificationService } from "./notification.service";
+import { emitToCompany, emitToUser } from "../realtime/socket";
 
 export class RequestService {
   private notifications = new NotificationService();
@@ -101,6 +102,9 @@ export class RequestService {
       { requestId: req.id, companyId: req.companyId, userId: req.targetUserId }
     );
 
+    emitToUser(req.targetUserId, 'request:updated', updated);
+    emitToUser(req.requesterId, 'request:updated', updated);
+    emitToCompany(req.companyId, 'company:member:updated', { userId: req.targetUserId, roles: membership.roles });
     return { updated, membership };
   }
 
@@ -117,7 +121,8 @@ export class RequestService {
       `Foydalanuvchi so'rovni rad etdi`,
       { requestId: req.id, companyId: req.companyId, userId: req.targetUserId }
     );
+    emitToUser(req.targetUserId, 'request:updated', updated);
+    emitToUser(req.requesterId, 'request:updated', updated);
     return updated;
   }
 }
-

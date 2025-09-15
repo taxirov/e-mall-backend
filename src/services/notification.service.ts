@@ -1,9 +1,12 @@
 import prisma from "../database";
 import { Prisma } from "@prisma/client";
+import { emitToUser } from "../realtime/socket";
 
 export class NotificationService {
   async create(userId: number, title: string, body?: string | null, data?: Prisma.InputJsonValue, requestId?: number | null) {
-    return prisma.notification.create({ data: { userId, title, body: body ?? undefined, data, requestId: requestId ?? undefined } });
+    const created = await prisma.notification.create({ data: { userId, title, body: body ?? undefined, data, requestId: requestId ?? undefined } });
+    emitToUser(userId, 'notification:new', created);
+    return created;
   }
 
   async list(userId: number, params?: { unreadOnly?: boolean }) {
@@ -22,4 +25,3 @@ export class NotificationService {
     return prisma.notification.updateMany({ where: { userId, readAt: null }, data: { readAt: new Date() } });
   }
 }
-
